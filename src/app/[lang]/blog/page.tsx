@@ -1,4 +1,3 @@
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { DICTIONARY } from "@/constants";
 import Link from "next/link";
@@ -39,7 +38,6 @@ export default async function BlogPage({ params }: BlogPageProps) {
 
   return (
     <main className="min-h-screen bg-black selection:bg-white/20">
-      <Navbar lang={lang} dict={dict.nav} />
       
       <div className="pt-32 pb-20 px-4 md:px-8 max-w-6xl mx-auto">
         {/* 页面标题 */}

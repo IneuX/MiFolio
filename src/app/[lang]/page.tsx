@@ -1,4 +1,3 @@
-import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import PortfolioGrid from "@/components/PortfolioGrid";
 import Contact from "@/components/Contact";
@@ -16,7 +15,6 @@ export default function Home({ params }: { params: { lang: string } }) {
 
   return (
     <main className="min-h-screen bg-black selection:bg-white/20">
-      <Navbar lang={lang} dict={dict.nav} />
       <Hero dict={dict.hero} />
       <PortfolioGrid dict={dict.portfolio} />
       <Contact dict={dict.contact} />

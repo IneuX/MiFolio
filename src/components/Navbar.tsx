@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
+import AuthButton from './AuthButton';
+import { usePathname } from 'next/navigation';
 
 interface NavbarProps {
   lang?: string;
@@ -11,6 +13,12 @@ interface NavbarProps {
 
 export default function Navbar({ lang = 'en', dict }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  
+  // 在 Admin 页面隐藏全局导航栏，因为 Admin 页面有自己的布局和头部
+  if (pathname?.includes('/admin')) {
+    return null;
+  }
   
   // 如果没有传入 dict，使用默认的 NAV_LINKS (为了兼容根路径重定向前的渲染)
   // 但在 [lang] 页面中应该总是传入 dict
@@ -35,6 +43,7 @@ export default function Navbar({ lang = 'en', dict }: NavbarProps) {
                 {link.label}
               </Link>
             ))}
+            <AuthButton lang={lang} />
           </div>
 
           {/* Mobile Toggle */}
@@ -63,7 +72,10 @@ export default function Navbar({ lang = 'en', dict }: NavbarProps) {
             {link.label}
           </Link>
         ))}
-        <div className="pt-8">
+        <div className="pt-8 flex flex-col items-center gap-6">
+          <div onClick={() => setIsOpen(false)}>
+            <AuthButton lang={lang} />
+          </div>
           <LanguageSwitcher />
         </div>
       </div>

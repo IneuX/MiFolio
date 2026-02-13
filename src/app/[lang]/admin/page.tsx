@@ -1,9 +1,8 @@
-import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/supabase-server';
-import { LogOut, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import { DICTIONARY } from '@/constants';
+import LogoutButton from '@/components/LogoutButton';
 
 interface AdminPageProps {
   params: { lang: string };
@@ -18,12 +17,6 @@ export default async function AdminPage({ params }: AdminPageProps) {
   
   // 管理员权限通过，显示页面
 
-  const handleLogout = async () => {
-    'use server';
-    await supabase.auth.signOut();
-    redirect('/login');
-  };
-
   return (
     <div className="min-h-screen bg-black text-white">
       {/* 管理员顶部栏 */}
@@ -36,15 +29,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
                 {commonDict.welcome}, {user.email} • {commonDict.adminPrivileges}
               </p>
             </div>
-            <form action={handleLogout}>
-              <button
-                type="submit"
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 transition-all"
-              >
-                <LogOut size={16} />
-                <span>{commonDict.logout}</span>
-              </button>
-            </form>
+            <LogoutButton lang={lang} />
           </div>
         </div>
       </header>
@@ -69,6 +54,19 @@ export default async function AdminPage({ params }: AdminPageProps) {
               <h3 className="text-lg font-bold mb-2">{dict.blogManagement}</h3>
               <p className="text-white/60 text-sm">
                 {dict.blogDescription}
+              </p>
+            </div>
+          </Link>
+
+          <Link href={`/${lang}/admin/moments`} className="group">
+            <div className="bg-white/5 rounded-2xl p-6 border border-white/10 hover:border-white/30 transition-all duration-300 hover:bg-white/10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-yellow-400 text-sm font-medium">Moments Management</div>
+                <ArrowRight size={16} className="text-white/40 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-lg font-bold mb-2">Moments</h3>
+              <p className="text-white/60 text-sm">
+                Manage your daily moments and thoughts.
               </p>
             </div>
           </Link>

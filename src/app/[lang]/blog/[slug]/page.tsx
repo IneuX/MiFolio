@@ -1,4 +1,3 @@
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BlogActions from "@/components/BlogActions";
 import { DICTIONARY } from "@/constants";
@@ -88,7 +87,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   if (!result.success || !result.data) {
     return (
       <main className="min-h-screen bg-black selection:bg-white/20">
-        <Navbar lang={lang} dict={dict.nav} />
+        
         <div className="pt-32 pb-20 px-4 md:px-8 max-w-6xl mx-auto text-center">
           <h1 className="text-4xl font-bold mb-4">
             {lang === "zh" ? "文章未找到" : "Post Not Found"}
@@ -131,7 +130,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   return (
     <main className="min-h-screen bg-black selection:bg-white/20">
-      <Navbar lang={lang} dict={dict.nav} />
+      
       
       <div className="pt-32 pb-20 px-4 md:px-8 max-w-4xl mx-auto">
         {/* 返回按钮 */}
