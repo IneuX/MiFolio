@@ -26,7 +26,7 @@ export default function AuthButton({ lang }: { lang: string }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
-      router.refresh() // 刷新 Server Components (如 Layout)
+      router.refresh()
     })
 
     return () => {
@@ -36,6 +36,7 @@ export default function AuthButton({ lang }: { lang: string }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
+    router.push(`/${lang}`) // 跳转到首页
     router.refresh()
   }
 
@@ -45,20 +46,25 @@ export default function AuthButton({ lang }: { lang: string }) {
 
   if (user) {
     return (
-      <div className="flex items-center gap-2 ml-2 border-l border-white/10 pl-2">
+      <div className="flex items-center gap-3 ml-2 border-l border-white/10 pl-4">
         <Link 
           href={`/${lang}/admin`}
-          className="p-2 rounded-full text-white/80 hover:text-black hover:bg-white transition-all duration-300"
-          title={user.email || 'Admin Dashboard'}
+          className="flex items-center gap-2 text-white/80 hover:text-white transition-all duration-300 group"
+          title="Go to Admin Dashboard"
         >
-          <UserIcon size={18} />
+          <div className="p-1.5 rounded-full bg-white/10 group-hover:bg-white/20">
+            <UserIcon size={14} />
+          </div>
+          <span className="text-xs font-medium max-w-[100px] truncate hidden sm:block">
+            {user.email}
+          </span>
         </Link>
         <button
           onClick={handleLogout}
-          className="p-2 rounded-full text-white/80 hover:text-red-500 hover:bg-white transition-all duration-300"
+          className="p-1.5 rounded-full text-white/60 hover:text-red-400 hover:bg-white/10 transition-all duration-300"
           title="Sign out"
         >
-          <LogOut size={18} />
+          <LogOut size={16} />
         </button>
       </div>
     )

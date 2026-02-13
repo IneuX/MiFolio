@@ -22,7 +22,7 @@ export default function RegisterPage({ params }: { params: { lang: string } }) {
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -34,7 +34,13 @@ export default function RegisterPage({ params }: { params: { lang: string } }) {
         throw error
       }
 
-      setSuccess(true)
+      // 如果返回了 session，说明不需要邮箱验证或已自动登录
+      if (data.session) {
+        router.push(`/${params.lang}/admin`)
+        router.refresh()
+      } else {
+        setSuccess(true)
+      }
     } catch (error: any) {
       setError(error.message)
     } finally {

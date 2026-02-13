@@ -2,11 +2,13 @@
 
 import { usePathname } from "next/navigation";
 import LanguageSwitcher from "./LanguageSwitcher";
+import AuthButton from "./AuthButton";
 import { ArrowUpRight } from "lucide-react";
 
 export default function TopActions() {
   const pathname = usePathname();
   const isZh = pathname.startsWith("/zh");
+  const lang = isZh ? 'zh' : 'en';
 
   const contactText = isZh ? "联系我" : "Contact Me";
 
@@ -21,6 +23,8 @@ export default function TopActions() {
       </a>
       
       <LanguageSwitcher />
+      
+      <AuthButton lang={lang} />
     </div>
   );
 }

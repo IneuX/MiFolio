@@ -15,7 +15,7 @@ export default function Navbar({ lang = 'en', dict }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   
-  // 在 Admin 页面隐藏全局导航栏，因为 Admin 页面有自己的布局和头部
+  // 在 Admin 页面隐藏全局导航栏
   if (pathname?.includes('/admin')) {
     return null;
   }
@@ -43,7 +43,6 @@ export default function Navbar({ lang = 'en', dict }: NavbarProps) {
                 {link.label}
               </Link>
             ))}
-            <AuthButton lang={lang} />
           </div>
 
           {/* Mobile Toggle */}

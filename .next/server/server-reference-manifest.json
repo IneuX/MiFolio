@@ -1,5 +1,54 @@
 {
-  "node": {},
+  "node": {
+    "1ed0395f610df4ab6f6664ca98e99a92d417fc50": {
+      "workers": {
+        "app/[lang]/blog/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fchensheng%2FDocuments%2FWorkSpace%2FMI%2FMiFolio%2Fsrc%2Fapp%2Factions%2Fblog-fixed.ts%22%2C%5B%22getBlogPosts%22%2C%22deleteBlogPost%22%2C%22saveBlogDraft%22%2C%22updateBlogPost%22%2C%22createBlogPost%22%2C%22getBlogPostBySlug%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/[lang]/blog/page": "rsc"
+      }
+    },
+    "a260da91fa84a7710c9c2240aa635a9c1a6a500b": {
+      "workers": {
+        "app/[lang]/blog/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fchensheng%2FDocuments%2FWorkSpace%2FMI%2FMiFolio%2Fsrc%2Fapp%2Factions%2Fblog-fixed.ts%22%2C%5B%22getBlogPosts%22%2C%22deleteBlogPost%22%2C%22saveBlogDraft%22%2C%22updateBlogPost%22%2C%22createBlogPost%22%2C%22getBlogPostBySlug%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/[lang]/blog/page": "rsc"
+      }
+    },
+    "be06d84d5778441b913ec1594a7135a9be00c33a": {
+      "workers": {
+        "app/[lang]/blog/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fchensheng%2FDocuments%2FWorkSpace%2FMI%2FMiFolio%2Fsrc%2Fapp%2Factions%2Fblog-fixed.ts%22%2C%5B%22getBlogPosts%22%2C%22deleteBlogPost%22%2C%22saveBlogDraft%22%2C%22updateBlogPost%22%2C%22createBlogPost%22%2C%22getBlogPostBySlug%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/[lang]/blog/page": "rsc"
+      }
+    },
+    "cca118a25e515a648ac7266af142a80ded9eb98f": {
+      "workers": {
+        "app/[lang]/blog/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fchensheng%2FDocuments%2FWorkSpace%2FMI%2FMiFolio%2Fsrc%2Fapp%2Factions%2Fblog-fixed.ts%22%2C%5B%22getBlogPosts%22%2C%22deleteBlogPost%22%2C%22saveBlogDraft%22%2C%22updateBlogPost%22%2C%22createBlogPost%22%2C%22getBlogPostBySlug%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/[lang]/blog/page": "rsc"
+      }
+    },
+    "e7010f14741e2e50fcc44d1d9926b90b60250f04": {
+      "workers": {
+        "app/[lang]/blog/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fchensheng%2FDocuments%2FWorkSpace%2FMI%2FMiFolio%2Fsrc%2Fapp%2Factions%2Fblog-fixed.ts%22%2C%5B%22getBlogPosts%22%2C%22deleteBlogPost%22%2C%22saveBlogDraft%22%2C%22updateBlogPost%22%2C%22createBlogPost%22%2C%22getBlogPostBySlug%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/[lang]/blog/page": "rsc"
+      }
+    },
+    "ed2b106123e79698a1d88bcbc3beb4084bc0468c": {
+      "workers": {
+        "app/[lang]/blog/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fchensheng%2FDocuments%2FWorkSpace%2FMI%2FMiFolio%2Fsrc%2Fapp%2Factions%2Fblog-fixed.ts%22%2C%5B%22getBlogPosts%22%2C%22deleteBlogPost%22%2C%22saveBlogDraft%22%2C%22updateBlogPost%22%2C%22createBlogPost%22%2C%22getBlogPostBySlug%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/[lang]/blog/page": "rsc"
+      }
+    }
+  },
   "edge": {},
-  "encryptionKey": "VShGEX6eJTa2jMImDgWZdk71MP8qlP8wXTmfaSr21D4="
+  "encryptionKey": "UpPDmeZwq11zQx3aPNGpE5SjY/7IbGDHwWeiJ2fl4Tk="
 }

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function LoginPage({ params }: { params: { lang: string } }) {
   const [email, setEmail] = useState('')
@@ -100,6 +101,12 @@ export default function LoginPage({ params }: { params: { lang: string } }) {
               'Sign in'
             )}
           </button>
+
+          <div className="text-center mt-4">
+             <Link href={`/${params.lang}/register`} className="text-sm text-white/60 hover:text-white underline">
+               Don't have an account? Sign up
+             </Link>
+          </div>
         </form>
       </div>
     </div>
