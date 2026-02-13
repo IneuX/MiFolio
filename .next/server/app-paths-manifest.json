@@ -1,5 +1,9 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/page": "app/page.js",
-  "/[lang]/page": "app/[lang]/page.js"
+  "/[lang]/page": "app/[lang]/page.js",
+  "/[lang]/blog/[slug]/page": "app/[lang]/blog/[slug]/page.js",
+  "/[lang]/admin/page": "app/[lang]/admin/page.js",
+  "/[lang]/blog/page": "app/[lang]/blog/page.js",
+  "/[lang]/admin/blog/page": "app/[lang]/admin/blog/page.js",
+  "/[lang]/admin/blog/[slug]/edit/page": "app/[lang]/admin/blog/[slug]/edit/page.js",
+  "/admin/blog/page": "app/admin/blog/page.js"
 }

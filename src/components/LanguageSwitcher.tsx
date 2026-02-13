@@ -11,7 +11,7 @@ export default function LanguageSwitcher({ className }: { className?: string }) 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // 获取当前语言
-  const currentLang = pathname.startsWith("/zh") ? "zh" : "en";
+  const currentLang = pathname.startsWith("/zh") ? "zh" : pathname.startsWith("/en") ? "en" : "en";
   
   // 语言选项
   const languages = [
@@ -36,13 +36,14 @@ export default function LanguageSwitcher({ className }: { className?: string }) 
       return;
     }
 
-    let newPath = "";
-    if (langCode === "zh") {
-      // 切换到中文
-      newPath = pathname === "/" ? "/zh" : `/zh${pathname}`;
+    let newPath = pathname;
+    
+    // 如果当前路径包含语言前缀，替换它
+    if (pathname.startsWith('/en') || pathname.startsWith('/zh')) {
+      newPath = pathname.replace(/^\/(en|zh)/, `/${langCode}`);
     } else {
-      // 切换到英文
-      newPath = pathname.replace(/^\/zh/, "") || "/";
+      // 如果没有语言前缀（例如根路径），添加它
+      newPath = `/${langCode}${pathname === '/' ? '' : pathname}`;
     }
 
     router.push(newPath);
