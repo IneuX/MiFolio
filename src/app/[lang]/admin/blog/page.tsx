@@ -1,9 +1,8 @@
-import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/supabase-server';
-import { LogOut, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import Link from 'next/link';
+import LogoutButton from '@/components/LogoutButton';
 import { getBlogPosts } from '@/app/actions/blog-fixed';
-import { supabase } from '@/lib/supabase';
 import { DICTIONARY } from '@/constants';
 import AdminBlogList from '@/components/AdminBlogList';
 
@@ -22,12 +21,6 @@ export default async function AdminBlogPage({ params }: AdminBlogPageProps) {
   // 获取所有博客文章（包括草稿和已发布）
   const result = await getBlogPosts('all');
   const allPosts = result.success ? result.data || [] : [];
-
-  const handleLogout = async () => {
-    'use server';
-    await supabase.auth.signOut();
-    redirect('/login');
-  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -48,15 +41,7 @@ export default async function AdminBlogPage({ params }: AdminBlogPageProps) {
               >
                 {commonDict.dashboard}
               </Link>
-              <form action={handleLogout}>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 transition-all"
-                >
-                  <LogOut size={16} />
-                  <span>{commonDict.logout}</span>
-                </button>
-              </form>
+              <LogoutButton lang={lang} label={commonDict.logout} />
             </div>
           </div>
         </div>

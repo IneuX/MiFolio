@@ -1,5 +1,9 @@
 'use server';
 
+/**
+ * @deprecated Use blog-fixed.ts instead. This file uses the browser Supabase client in server context
+ * and does not enforce slug uniqueness. New code should import from '@/app/actions/blog-fixed'.
+ */
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/supabase-server';

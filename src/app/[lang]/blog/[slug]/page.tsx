@@ -192,7 +192,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           />
         </header>
 
-        {/* 文章内容 */}
+        {/* 文章内容：ReactMarkdown 默认转义 HTML，不执行脚本 */}
         <article className="prose prose-invert max-w-none">
           <div className="bg-[#0A0A0A] rounded-2xl border border-white/10 p-8 md:p-12">
             <ReactMarkdown

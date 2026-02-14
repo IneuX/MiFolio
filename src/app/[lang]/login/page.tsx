@@ -7,6 +7,21 @@ import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
+const EMAIL_MAX_LENGTH = 256
+const PASSWORD_MIN_LENGTH = 6
+const PASSWORD_MAX_LENGTH = 128
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validateLogin(email: string, password: string): string | null {
+  const e = email.trim()
+  if (!e) return 'Email is required'
+  if (e.length > EMAIL_MAX_LENGTH) return 'Email is too long'
+  if (!EMAIL_REGEX.test(e)) return 'Please enter a valid email address'
+  if (password.length < PASSWORD_MIN_LENGTH) return `Password must be at least ${PASSWORD_MIN_LENGTH} characters`
+  if (password.length > PASSWORD_MAX_LENGTH) return 'Password is too long'
+  return null
+}
+
 export default function LoginPage({ params }: { params: { lang: string } }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -20,20 +35,31 @@ export default function LoginPage({ params }: { params: { lang: string } }) {
     setLoading(true)
     setError(null)
 
+    const validationError = validateLogin(email, password)
+    if (validationError) {
+      setError(validationError)
+      setLoading(false)
+      return
+    }
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password,
       })
 
-      if (error) {
-        throw error
+      if (signInError) {
+        throw signInError
       }
 
       router.push(`/${params.lang}/admin`)
       router.refresh()
-    } catch (error: any) {
-      setError(error.message)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed'
+      setError(message)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[login] signInWithPassword failed:', message)
+      }
     } finally {
       setLoading(false)
     }
@@ -65,6 +91,7 @@ export default function LoginPage({ params }: { params: { lang: string } }) {
                 type="email"
                 autoComplete="email"
                 required
+                maxLength={EMAIL_MAX_LENGTH}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent transition-colors"
@@ -82,6 +109,8 @@ export default function LoginPage({ params }: { params: { lang: string } }) {
                 type="password"
                 autoComplete="current-password"
                 required
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={PASSWORD_MAX_LENGTH}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent transition-colors"

@@ -1,14 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { LogIn } from 'lucide-react';
 
+/** 仅允许同站相对路径，防止开放重定向 */
+function getSafeRedirectFrom(from: string | null): string {
+  const fallback = '/admin';
+  if (!from || typeof from !== 'string') return fallback;
+  const trimmed = from.trim();
+  if (trimmed === '') return fallback;
+  if (!trimmed.startsWith('/') || trimmed.startsWith('//')) {
+    if (typeof console !== 'undefined') {
+      console.warn('[login] Rejected unsafe redirect "from": not a relative path');
+    }
+    return fallback;
+  }
+  if (trimmed.includes('\\')) {
+    if (typeof console !== 'undefined') {
+      console.warn('[login] Rejected unsafe redirect "from": contains backslash');
+    }
+    return fallback;
+  }
+  if (trimmed.length > 512) {
+    if (typeof console !== 'undefined') {
+      console.warn('[login] Rejected unsafe redirect "from": path too long');
+    }
+    return fallback;
+  }
+  return trimmed;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const from = searchParams.get('from') || '/admin';
+  const from = useMemo(() => getSafeRedirectFrom(searchParams.get('from')), [searchParams]);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

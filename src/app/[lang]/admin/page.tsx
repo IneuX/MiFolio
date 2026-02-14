@@ -96,8 +96,7 @@ export default async function AdminPage({ params }: AdminPageProps) {
               <div className="text-green-400 text-sm font-medium mb-2">Secure Access</div>
               <h4 className="text-lg font-bold mb-2">Protected by Email</h4>
               <p className="text-white/60 text-sm">
-                Only your email ({process.env.ADMIN_EMAIL}) can access this admin panel.
-                All API calls are protected by middleware.
+                Only the configured admin account can access this panel. All API calls are protected by middleware.
               </p>
             </div>
             <div className="bg-white/5 rounded-2xl p-6 border border-white/10">

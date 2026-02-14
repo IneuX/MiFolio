@@ -24,14 +24,14 @@ interface BlogEditorProps {
   dict?: any;
   initialData?: BlogPost;
   mode?: 'create' | 'edit';
+  /** 语言代码，用于成功后重定向到 /${lang}/admin/blog */
+  lang?: string;
 }
 
-export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogEditorProps) {
+export default function BlogEditor({ dict, initialData, mode = 'create', lang }: BlogEditorProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [content, setContent] = useState(initialData?.content || "");
   const [showPreview, setShowPreview] = useState(false);
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,6 +45,8 @@ export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogE
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const handlePublishRef = useRef<() => void>(() => {});
+  const handleSaveDraftRef = useRef<() => void>(() => {});
 
   // 自动调整 textarea 高度
   useEffect(() => {
@@ -60,13 +62,6 @@ export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogE
 
   // 处理发布/更新
   const handlePublish = async () => {
-    // 只有在创建新文章时才强制要求密码，编辑时如果是管理员已登录状态可能不需要（取决于需求）
-    // 这里保持一致性，还是要求密码
-    if (!password) {
-      alert(dict?.passwordPlaceholder || "Please enter password");
-      return;
-    }
-
     if (!title.trim()) {
       alert("Title is required");
       return;
@@ -83,7 +78,6 @@ export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogE
       const formData = new FormData();
       formData.append('title', title);
       formData.append('content', content);
-      formData.append('password', password);
       formData.append('tags', settings.tags.join(','));
       formData.append('category', settings.category);
       formData.append('visibility', settings.visibility);
@@ -103,17 +97,15 @@ export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogE
           localStorage.removeItem('blog_draft_content');
         }
 
-        // 显示成功消息
         alert(dict?.publishSuccess || "Published successfully!");
-
-        // 跳转到博客管理页面
-        router.push('/admin/blog');
+        const adminBlogPath = lang ? `/${lang}/admin/blog` : '/admin/blog';
+        router.push(adminBlogPath);
         router.refresh();
       } else {
         alert(result.error || dict?.publishError || "Failed to publish");
       }
     } catch (error) {
-      console.error("Error publishing blog post:", error);
+      console.error('[BlogEditor] Publish failed:', error instanceof Error ? error.message : error);
       alert(dict?.publishError || "Failed to publish");
     } finally {
       setIsPublishing(false);
@@ -154,7 +146,7 @@ export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogE
         alert(result.error || "Failed to save draft");
       }
     } catch (error) {
-      console.error("Error saving draft:", error);
+      console.error('[BlogEditor] Save draft failed:', error instanceof Error ? error.message : error);
       alert("Failed to save draft");
     } finally {
       setIsSaving(false);
@@ -180,24 +172,25 @@ export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogE
     });
   };
 
-  // 处理键盘快捷键
+  // 保持 ref 指向最新的处理函数，避免快捷键闭包陈旧
+  handlePublishRef.current = handlePublish;
+  handleSaveDraftRef.current = handleSaveDraft;
+
+  // 处理键盘快捷键（通过 ref 调用最新 handler，避免依赖 title/content/settings 导致重复注册）
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + S 保存草稿
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        handleSaveDraft();
+        handleSaveDraftRef.current?.();
       }
-      // Ctrl/Cmd + P 发布
       if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
         e.preventDefault();
-        handlePublish();
+        handlePublishRef.current?.();
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [title, content, password, settings]);
+  }, []);
 
   // 自动保存草稿到 localStorage (仅在创建模式下)
   useEffect(() => {
@@ -215,17 +208,17 @@ export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogE
     return () => clearTimeout(timeoutId);
   }, [title, content, mode]);
 
-  // 从 localStorage 加载草稿 (仅在创建模式下)
+  // 从 localStorage 加载草稿：仅创建模式下、挂载时恢复一次，避免与 initialData 竞态
+  const hasRestoredDraftRef = useRef(false);
   useEffect(() => {
-    if (mode !== 'create') return;
+    if (mode !== 'create' || hasRestoredDraftRef.current) return;
+    if (typeof window === 'undefined') return;
 
-    if (typeof window !== 'undefined') {
-      const savedTitle = localStorage.getItem('blog_draft_title');
-      const savedContent = localStorage.getItem('blog_draft_content');
-      
-      if (savedTitle && !title) setTitle(savedTitle);
-      if (savedContent && !content) setContent(savedContent);
-    }
+    const savedTitle = localStorage.getItem('blog_draft_title');
+    const savedContent = localStorage.getItem('blog_draft_content');
+    if (savedTitle) setTitle(savedTitle);
+    if (savedContent) setContent(savedContent);
+    hasRestoredDraftRef.current = true;
   }, [mode]);
 
   return (
@@ -297,26 +290,6 @@ export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogE
 
           <div className="h-6 w-px bg-white/10" />
 
-          {/* 密码输入 */}
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={dict?.passwordPlaceholder || "Enter password to publish..."}
-              className="px-4 py-2 pl-10 pr-8 rounded-full text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 w-48"
-            />
-            <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-            <button
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
-            >
-              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
-          </div>
-
-          <div className="h-6 w-px bg-white/10" />
-
           {/* 设置按钮 */}
           <button
             onClick={() => setShowSettings(true)}
@@ -341,7 +314,7 @@ export default function BlogEditor({ dict, initialData, mode = 'create' }: BlogE
           {/* 发布按钮 */}
           <button
             onClick={handlePublish}
-            disabled={isPublishing || !password}
+            disabled={isPublishing}
             className="flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium text-black bg-white hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed ml-2"
           >
             <Send size={16} />

@@ -31,11 +31,14 @@ export default function AdminBlogList({ posts, dict, lang }: AdminBlogListProps)
   const router = useRouter();
 
   const handleDelete = async (postId: string) => {
+    if (!confirm(dict?.deleteWarning || "Are you sure you want to delete this post?")) {
+      return;
+    }
+
     setIsDeleting(postId);
     try {
       const result = await deleteBlogPost(postId);
       if (result.success) {
-        // 刷新页面以显示最新列表
         router.refresh();
       } else {
         alert(result.error || "Failed to delete post");
@@ -45,7 +48,6 @@ export default function AdminBlogList({ posts, dict, lang }: AdminBlogListProps)
       alert("Failed to delete post");
     } finally {
       setIsDeleting(null);
-      setShowDeleteConfirm(null);
     }
   };
 
@@ -159,7 +161,7 @@ export default function AdminBlogList({ posts, dict, lang }: AdminBlogListProps)
                   )}
                   {post.slug && post.slug.trim() !== '' ? (
                     <Link
-                      href={`/${lang}/admin/blog/${post.slug}/edit`}
+                      href={`/${lang}/admin/blog/${encodeURIComponent(post.slug)}/edit`}
                       className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
                       title={dict?.edit || "Edit"}
                     >
@@ -174,41 +176,19 @@ export default function AdminBlogList({ posts, dict, lang }: AdminBlogListProps)
                     </div>
                   )}
                   <button
-                    onClick={() => setShowDeleteConfirm(post.id)}
-                    className="p-2 rounded-lg text-white/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    onClick={() => handleDelete(post.id)}
+                    disabled={isDeleting === post.id}
+                    className="p-2 rounded-lg text-white/60 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                     title={dict?.delete || "Delete"}
                   >
-                    <Trash2 size={16} />
+                    {isDeleting === post.id ? (
+                      <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
                   </button>
                 </div>
               </div>
-
-              {/* 删除确认对话框 */}
-              {showDeleteConfirm === post.id && (
-                <div className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="flex items-center gap-3 text-red-400">
-                    <AlertTriangle size={20} />
-                    <span className="text-sm font-medium">
-                      {dict?.deleteWarning || "Are you sure you want to delete this post? This action cannot be undone."}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowDeleteConfirm(null)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-                    >
-                      {dict?.cancel || "Cancel"}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(post.id)}
-                      disabled={isDeleting === post.id}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
-                    >
-                      {isDeleting === post.id ? (dict?.deleting || "Deleting...") : (dict?.confirm || "Confirm")}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>

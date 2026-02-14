@@ -1,13 +1,22 @@
 'use client';
 
+/**
+ * 仅用于开发环境调试认证状态。生产构建下会渲染 "Not Available"。
+ * 请勿在生产环境依赖或暴露此页。
+ */
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export default function DebugPage() {
   const [session, setSession] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [authStatus, setAuthStatus] = useState<string>('Checking...');
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [debugEmail, setDebugEmail] = useState('');
+  const [debugPassword, setDebugPassword] = useState('');
 
   useEffect(() => {
     checkAuth();
@@ -16,64 +25,83 @@ export default function DebugPage() {
   const checkAuth = async () => {
     try {
       const { data: { session: sessionData }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session check:', { sessionData, sessionError });
-      
       if (sessionError) {
         setAuthStatus(`Session Error: ${sessionError.message}`);
-      } else if (sessionData) {
+        setSession(null);
+        setUser(null);
+        setIsAdmin(null);
+        return;
+      }
+      if (sessionData) {
         setSession(sessionData);
         const { data: { user: userData }, error: userError } = await supabase.auth.getUser();
-        console.log('User check:', { userData, userError });
         if (userError) {
           setAuthStatus(`User Error: ${userError.message}`);
-        } else {
-          setUser(userData);
-          setAuthStatus(`Authenticated as ${userData?.email}`);
+          setUser(null);
+          setIsAdmin(null);
+          return;
+        }
+        setUser(userData);
+        setAuthStatus(`Authenticated as ${userData?.email ?? 'unknown'}`);
+        try {
+          const res = await fetch('/api/auth/status');
+          const json = await res.json();
+          setIsAdmin(json.success && json.isAdmin === true);
+        } catch {
+          setIsAdmin(null);
         }
       } else {
         setAuthStatus('No session found');
+        setSession(null);
+        setUser(null);
+        setIsAdmin(null);
       }
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error('[debug] Auth check error:', error);
       setAuthStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setSession(null);
+      setUser(null);
+      setIsAdmin(null);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSignUp = async () => {
-    const email = 'ineux@outlook.com';
-    const password = 'testpassword123';
-    
+    const email = debugEmail.trim();
+    const password = debugPassword;
+    if (!email || !password) {
+      alert('Please enter email and password');
+      return;
+    }
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-      
+      const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-      alert(`Sign up successful! Check ${email} for confirmation.`);
+      alert('Sign up successful! Check your email for confirmation if required.');
       await checkAuth();
-    } catch (error: any) {
-      alert(`Sign up error: ${error.message}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Sign up failed';
+      console.error('[debug] Sign up error:', msg);
+      alert(`Sign up error: ${msg}`);
     }
   };
 
   const handleSignIn = async () => {
-    const email = 'ineux@outlook.com';
-    const password = 'testpassword123';
-    
+    const email = debugEmail.trim();
+    const password = debugPassword;
+    if (!email || !password) {
+      alert('Please enter email and password');
+      return;
+    }
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      alert(`Sign in successful!`);
+      alert('Sign in successful!');
       await checkAuth();
-    } catch (error: any) {
-      alert(`Sign in error: ${error.message}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Sign in failed';
+      console.error('[debug] Sign in error:', msg);
+      alert(`Sign in error: ${msg}`);
     }
   };
 
@@ -82,15 +110,27 @@ export default function DebugPage() {
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);
+      setIsAdmin(null);
       setAuthStatus('Signed out');
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('[debug] Sign out error:', error);
     }
   };
 
+  if (!IS_DEV) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-8">
+        <div className="text-center text-white/60">
+          <h1 className="text-xl font-bold mb-2">Not Available</h1>
+          <p>This page is only available in development.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white p-8">
-      <h1 className="text-3xl font-bold mb-6">Authentication Debug</h1>
+      <h1 className="text-3xl font-bold mb-6">Authentication Debug (Dev Only)</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white/5 p-6 rounded-xl">
@@ -115,12 +155,8 @@ export default function DebugPage() {
               <span>{user ? 'Yes' : 'No'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/60">Admin Email:</span>
-              <span>ineux@outlook.com</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white/60">Matches Admin:</span>
-              <span>{user?.email === 'ineux@outlook.com' ? 'Yes' : 'No'}</span>
+              <span className="text-white/60">Is Admin:</span>
+              <span>{isAdmin === null ? '—' : isAdmin ? 'Yes' : 'No'}</span>
             </div>
           </div>
         </div>
@@ -128,17 +164,31 @@ export default function DebugPage() {
         <div className="bg-white/5 p-6 rounded-xl">
           <h2 className="text-xl font-bold mb-4">Actions</h2>
           <div className="space-y-3">
+            <input
+              type="email"
+              placeholder="Email"
+              value={debugEmail}
+              onChange={(e) => setDebugEmail(e.target.value)}
+              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={debugPassword}
+              onChange={(e) => setDebugPassword(e.target.value)}
+              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40"
+            />
             <button
               onClick={handleSignUp}
               className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium"
             >
-              Sign Up (ineux@outlook.com)
+              Sign Up
             </button>
             <button
               onClick={handleSignIn}
               className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium"
             >
-              Sign In (ineux@outlook.com)
+              Sign In
             </button>
             <button
               onClick={handleSignOut}
@@ -188,9 +238,7 @@ export default function DebugPage() {
       )}
       
       <div className="mt-8 text-sm text-white/60">
-        <p>Environment: {process.env.NODE_ENV}</p>
-        <p>Supabase URL configured: {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Yes' : 'No'}</p>
-        <p>Note: Check browser console for detailed logs.</p>
+        <p>Development mode. Check browser console for detailed logs.</p>
       </div>
     </div>
   );

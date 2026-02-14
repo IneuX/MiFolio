@@ -6,13 +6,17 @@ import { User } from '@supabase/supabase-js'
 import { LogIn, LogOut, User as UserIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function AuthButton({ lang }: { lang: string }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
+  if (supabaseRef.current === null) {
+    supabaseRef.current = createClient()
+  }
+  const supabase = supabaseRef.current
 
   useEffect(() => {
     const getUser = async () => {
@@ -32,12 +36,16 @@ export default function AuthButton({ lang }: { lang: string }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase, router])
+  }, [router])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push(`/${lang}`) // 跳转到首页
-    router.refresh()
+    try {
+      await supabase.auth.signOut()
+      router.push(`/${lang}`)
+      router.refresh()
+    } catch (error) {
+      console.error('[AuthButton] signOut failed:', error instanceof Error ? error.message : error)
+    }
   }
 
   if (loading) {

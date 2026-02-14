@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/supabase-server';
 import BlogEditor from '@/components/BlogEditor';
-import { LogOut, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import LogoutButton from '@/components/LogoutButton';
 import { getBlogPostBySlug } from '@/app/actions/blog-fixed';
 import { DICTIONARY } from '@/constants';
 
@@ -30,12 +30,6 @@ export default async function EditBlogPage({ params }: EditBlogPageProps) {
   }
   
   const post = result.data;
-
-  const handleLogout = async () => {
-    'use server';
-    await supabase.auth.signOut();
-    redirect('/login');
-  };
 
   // 合并字典
   const editorDict = {
@@ -65,15 +59,7 @@ export default async function EditBlogPage({ params }: EditBlogPageProps) {
               >
                 {commonDict.dashboard}
               </Link>
-              <form action={handleLogout}>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 transition-all"
-                >
-                  <LogOut size={16} />
-                  <span>{commonDict.logout}</span>
-                </button>
-              </form>
+              <LogoutButton lang={lang} label={commonDict.logout} />
             </div>
           </div>
         </div>
@@ -90,10 +76,11 @@ export default async function EditBlogPage({ params }: EditBlogPageProps) {
 
         {/* 博客编辑器 */}
         <div className="bg-[#0A0A0A] rounded-2xl border border-white/10 overflow-hidden">
-          <BlogEditor 
+          <BlogEditor
             dict={editorDict}
             initialData={post}
             mode="edit"
+            lang={lang}
           />
         </div>
       </main>

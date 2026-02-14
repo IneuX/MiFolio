@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         showPrivate = true;
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('[api/moments] GET auth check failed:', error instanceof Error ? error.message : error);
     }
   }
 
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error fetching moments:', error);
+    console.error('[api/moments] GET failed:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -90,16 +90,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Supabase insert error:', error);
+      console.error('[api/moments] POST Supabase insert error:', error.message);
       throw error;
     }
 
     return NextResponse.json(moment, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating moment:', error);
-    return NextResponse.json({ 
-      error: error.message || 'Internal Server Error',
-      details: error
-    }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    console.error('[api/moments] POST failed:', message, error instanceof Error ? error.stack : undefined);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

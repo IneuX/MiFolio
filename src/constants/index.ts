@@ -5,7 +5,7 @@ export const DICTIONARY = {
       { href: "/", label: "Home" },
       { href: "/en/blog", label: "Blog" },
       { href: "#project", label: "Project" },
-      { href: "#moments", label: "Moments" },
+      { href: "/en/moments", label: "Moments" },
       { href: "#aboutme", label: "About me" },
     ],
     hero: {
@@ -180,7 +180,7 @@ export const DICTIONARY = {
       { href: "/", label: "首页" },
       { href: "/zh/blog", label: "博客" },
       { href: "#project", label: "项目" },
-      { href: "#moments", label: "时光" },
+      { href: "/zh/moments", label: "时光" },
       { href: "#aboutme", label: "关于我" },
     ],
     hero: {

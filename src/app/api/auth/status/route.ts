@@ -4,10 +4,19 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     const supabase = await createClient();
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
+    if (sessionError) {
+      console.error('[auth/status] getSession failed:', sessionError.message);
+    }
+    if (userError) {
+      console.error('[auth/status] getUser failed:', userError.message);
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const matchesAdmin = Boolean(adminEmail && user?.email === adminEmail);
+
     return NextResponse.json({
       success: true,
       session: session ? {
@@ -28,15 +37,19 @@ export async function GET() {
       } : null,
       hasSession: !!session,
       hasUser: !!user,
-      sessionError: error?.message,
-      userError: userError?.message,
-      adminEmail: process.env.ADMIN_EMAIL,
-      matchesAdmin: user?.email === process.env.ADMIN_EMAIL,
+      sessionError: sessionError?.message ?? null,
+      userError: userError?.message ?? null,
+      isAdmin: matchesAdmin,
     });
   } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[auth/status] Unexpected error:', message, error instanceof Error ? error.stack : undefined);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Internal server error',
+      },
+      { status: 500 }
+    );
   }
 }

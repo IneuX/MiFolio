@@ -55,11 +55,20 @@ export default function MomentForm({ initialData, lang }: MomentFormProps) {
         router.push(`/${lang}/admin/moments`);
         router.refresh();
       } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to save moment');
+        let errorMessage = 'Failed to save moment';
+        try {
+          const contentType = res.headers.get('content-type');
+          if (contentType?.includes('application/json')) {
+            const data = await res.json();
+            errorMessage = data?.error || errorMessage;
+          }
+        } catch (parseErr) {
+          console.error('[MomentForm] Failed to parse error response:', parseErr instanceof Error ? parseErr.message : parseErr);
+        }
+        alert(errorMessage);
       }
     } catch (error) {
-      console.error(error);
+      console.error('[MomentForm] Submit failed:', error instanceof Error ? error.message : error);
       alert('Error saving moment');
     } finally {
       setIsSaving(false);

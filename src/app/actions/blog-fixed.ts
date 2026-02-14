@@ -1,17 +1,17 @@
 'use server';
 
-import { supabase as publicSupabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase-server';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/supabase-server';
 
-// Helper to get the appropriate Supabase client
+/** 获取服务端 Supabase 客户端（带 cookie），不 fallback 到浏览器客户端以防权限错乱 */
 async function getSupabase() {
   try {
     return await createClient();
   } catch (error) {
-    // Fallback to public client if cookies() is not available (e.g. during static generation)
-    return publicSupabase;
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[blog-fixed] getSupabase failed: server Supabase client unavailable', message, error instanceof Error ? error.stack : undefined);
+    throw new Error('Server configuration error. Please try again later.');
   }
 }
 
@@ -24,52 +24,38 @@ export async function createBlogPost(formData: FormData) {
     
     const title = formData.get('title') as string;
     const content = formData.get('content') as string;
-    const password = formData.get('password') as string;
     const tags = formData.get('tags') as string;
     const category = formData.get('category') as string;
     const visibility = formData.get('visibility') as string;
-    
-    console.log('Creating blog post with title:', title);
-    console.log('Password provided:', !!password);
-    
-    // 保留密码验证作为额外安全层（可选）
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    console.log('Admin password configured:', !!adminPassword);
-    
-    if (adminPassword && password !== adminPassword) {
-      console.error('Invalid password');
-      return {
-        success: false,
-        error: 'Invalid password'
-      };
-    }
-    
-    // 验证必填字段
+
     if (!title?.trim()) {
-      return {
-        success: false,
-        error: 'Title is required'
-      };
+      return { success: false, error: 'Title is required' };
+    }
+    if (title.trim().length > TITLE_MAX_LENGTH) {
+      console.warn('[blog-fixed] createBlogPost: title exceeds max length');
+      return { success: false, error: `Title must be ${TITLE_MAX_LENGTH} characters or less` };
+    }
+    if (!content?.trim()) {
+      return { success: false, error: 'Content is required' };
+    }
+    if (content.length > CONTENT_MAX_LENGTH) {
+      console.warn('[blog-fixed] createBlogPost: content exceeds max length');
+      return { success: false, error: 'Content is too long' };
     }
 
-    if (!content?.trim()) {
-      return {
-        success: false,
-        error: 'Content is required'
-      };
-    }
-    
     // 生成 slug
     let slug = generateSlug(title);
     
     // 双重验证：确保slug不为空
     if (!slug || slug.trim() === '') {
-      console.warn('Generated slug is empty, using fallback');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[blog-fixed] createBlogPost: generated slug empty, using fallback');
+      }
       slug = `post-${Date.now()}`;
     }
-    
-    console.log('Generated slug:', slug);
-    
+
+    slug = await ensureUniqueSlug(supabase, slug);
+
     // 准备数据
     const blogData = {
       title: title.trim(),
@@ -82,12 +68,7 @@ export async function createBlogPost(formData: FormData) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
-    console.log('Blog data prepared:', { ...blogData, content: '[...]' });
-    
-    // 检查 Supabase 连接
-    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Configured' : 'Not configured');
-    
+
     // 插入数据库
     const { data, error } = await supabase
       .from('blog_posts')
@@ -96,15 +77,10 @@ export async function createBlogPost(formData: FormData) {
       .single();
     
     if (error) {
-      console.error('Error creating blog post:', error);
-      return {
-        success: false,
-        error: `Database error: ${error.message}`
-      };
+      console.error('[blog-fixed] createBlogPost Supabase error:', error.message);
+      return { success: false, error: 'Failed to create post' };
     }
-    
-    console.log('Blog post created successfully:', data?.id);
-    
+
     // 重新验证博客页面
     revalidatePath('/blog');
     revalidatePath('/[lang]/blog', 'page');
@@ -116,11 +92,8 @@ export async function createBlogPost(formData: FormData) {
     };
     
   } catch (error) {
-    console.error('Error in createBlogPost:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred'
-    };
+    console.error('[blog-fixed] createBlogPost failed:', error instanceof Error ? error.message : error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
@@ -137,13 +110,23 @@ export async function saveBlogDraft(formData: FormData) {
     const category = formData.get('category') as string;
     const visibility = formData.get('visibility') as string;
     
-    // 生成 slug（如果有标题）
-    const slug = title ? generateSlug(title) : `draft-${Date.now()}`;
-    
-    // 准备数据
+    const trimmedTitle = title?.trim() || 'Untitled Draft';
+    const trimmedContent = content?.trim() ?? '';
+    if (trimmedTitle.length > TITLE_MAX_LENGTH) {
+      console.warn('[blog-fixed] saveBlogDraft: title exceeds max length');
+      return { success: false, error: `Title must be ${TITLE_MAX_LENGTH} characters or less` };
+    }
+    if (trimmedContent.length > CONTENT_MAX_LENGTH) {
+      console.warn('[blog-fixed] saveBlogDraft: content exceeds max length');
+      return { success: false, error: 'Content is too long' };
+    }
+
+    let slug = title ? generateSlug(title) : `draft-${Date.now()}`;
+    slug = await ensureUniqueSlug(supabase, slug);
+
     const blogData = {
-      title: title?.trim() || 'Untitled Draft',
-      content: content?.trim() || '',
+      title: trimmedTitle,
+      content: trimmedContent,
       slug,
       status: 'draft' as const,
       tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
@@ -161,24 +144,20 @@ export async function saveBlogDraft(formData: FormData) {
       .single();
     
     if (error) {
-      console.error('Error saving draft:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+      console.error('[blog-fixed] saveBlogDraft Supabase error:', error.message);
+      return { success: false, error: 'Failed to save draft' };
     }
-    
+
     return {
       success: true,
       data,
       message: 'Draft saved successfully!'
     };
-    
   } catch (error) {
-    console.error('Error in saveBlogDraft:', error);
+    console.error('[blog-fixed] saveBlogDraft failed:', error instanceof Error ? error.message : error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred'
+      error: 'An unexpected error occurred'
     };
   }
 }
@@ -198,36 +177,53 @@ export async function getBlogPosts(status?: 'draft' | 'published' | 'all') {
     const { data, error } = await query;
     
     if (error) {
-      console.error('Error fetching blog posts:', error);
-      return {
-        success: false,
-        error: error.message,
-        data: []
-      };
+      console.error('[blog-fixed] getBlogPosts Supabase error:', error.message);
+      return { success: false, error: 'Failed to fetch posts', data: [] };
     }
-    
+
     return {
       success: true,
       data: data || []
     };
   } catch (error) {
-    console.error('Error in getBlogPosts:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch blog posts',
-      data: []
-    };
+    console.error('[blog-fixed] getBlogPosts failed:', error instanceof Error ? error.message : error);
+    return { success: false, error: 'Failed to fetch blog posts', data: [] };
+  }
+}
+
+const SLUG_MAX_LENGTH = 512;
+const TITLE_MAX_LENGTH = 500;
+const CONTENT_MAX_LENGTH = 2_000_000; // 2MB chars
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidPostId(id: string): boolean {
+  return typeof id === 'string' && id.length > 0 && UUID_REGEX.test(id.trim());
+}
+
+function safeDecodeSlug(slug: string): { ok: true; value: string } | { ok: false } {
+  if (!slug || typeof slug !== 'string') return { ok: false };
+  const trimmed = slug.trim();
+  if (trimmed.length === 0 || trimmed.length > SLUG_MAX_LENGTH) return { ok: false };
+  try {
+    const decoded = decodeURIComponent(trimmed);
+    if (decoded.length > SLUG_MAX_LENGTH) return { ok: false };
+    return { ok: true, value: decoded };
+  } catch {
+    return { ok: false };
   }
 }
 
 export async function getBlogPostBySlug(slug: string) {
   try {
+    const decoded = safeDecodeSlug(slug);
+    if (!decoded.ok) {
+      console.warn('[blog-fixed] getBlogPostBySlug: invalid or malformed slug', { slugLength: slug?.length });
+      return { success: false, error: 'Post not found', data: null };
+    }
+    const decodedSlug = decoded.value;
+
     const supabase = await getSupabase();
-    
-    // 确保 slug 被正确解码（处理中文 URL 编码问题）
-    const decodedSlug = decodeURIComponent(slug);
-    console.log(`Fetching blog post. Original slug: "${slug}", Decoded slug: "${decodedSlug}"`);
-    
+
     // 1. 尝试获取公开文章（适用于所有人）
     const { data: publicPost } = await supabase
       .from('blog_posts')
@@ -269,8 +265,9 @@ export async function getBlogPostBySlug(slug: string) {
         }
       }
     } catch (authError) {
-      // 忽略认证错误，继续返回未找到
-      console.log('Auth check failed or not admin:', authError);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[blog-fixed] getBlogPostBySlug auth check failed or not admin:', authError instanceof Error ? authError.message : authError);
+      }
     }
 
     // 3. 如果都未找到，返回错误
@@ -281,10 +278,10 @@ export async function getBlogPostBySlug(slug: string) {
     };
     
   } catch (error) {
-    console.error('Error in getBlogPostBySlug:', error);
+    console.error('[blog-fixed] getBlogPostBySlug failed:', error instanceof Error ? error.message : error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch blog post',
+      error: 'Failed to fetch blog post',
       data: null
     };
   }
@@ -292,11 +289,15 @@ export async function getBlogPostBySlug(slug: string) {
 
 export async function updateBlogPost(postId: string, formData: FormData) {
   try {
-    // 验证管理员权限
     await requireAdmin();
-    
+
+    if (!isValidPostId(postId)) {
+      console.warn('[blog-fixed] updateBlogPost: invalid postId format');
+      return { success: false, error: 'Invalid post' };
+    }
+
     const supabase = await getSupabase();
-    
+
     const title = formData.get('title') as string;
     const content = formData.get('content') as string;
     const tags = formData.get('tags') as string;
@@ -304,23 +305,26 @@ export async function updateBlogPost(postId: string, formData: FormData) {
     const visibility = formData.get('visibility') as string;
     const status = formData.get('status') as string;
     
-    // 验证必填字段
     if (!title?.trim()) {
-      return {
-        success: false,
-        error: 'Title is required'
-      };
+      return { success: false, error: 'Title is required' };
+    }
+    if (title.trim().length > TITLE_MAX_LENGTH) {
+      console.warn('[blog-fixed] updateBlogPost: title exceeds max length');
+      return { success: false, error: `Title must be ${TITLE_MAX_LENGTH} characters or less` };
+    }
+    if (!content?.trim()) {
+      return { success: false, error: 'Content is required' };
+    }
+    if (content.length > CONTENT_MAX_LENGTH) {
+      console.warn('[blog-fixed] updateBlogPost: content exceeds max length');
+      return { success: false, error: 'Content is too long' };
     }
 
-    if (!content?.trim()) {
-      return {
-        success: false,
-        error: 'Content is required'
-      };
-    }
-    
     // 生成新的 slug（如果标题改变）
-    const slug = generateSlug(title);
+    let slug = generateSlug(title);
+    
+    // 确保 slug 唯一 (排除当前文章 ID)
+    slug = await ensureUniqueSlug(supabase, slug, postId);
     
     // 准备更新数据
     const updateData = {
@@ -343,14 +347,9 @@ export async function updateBlogPost(postId: string, formData: FormData) {
       .single();
     
     if (error) {
-      console.error('Error updating blog post:', error);
-      return {
-        success: false,
-        error: `Database error: ${error.message}`
-      };
+      console.error('[blog-fixed] updateBlogPost Supabase error:', error.message);
+      return { success: false, error: 'Failed to update post' };
     }
-    
-    console.log('Blog post updated successfully:', data?.id);
     
     // 重新验证博客页面
     revalidatePath('/blog');
@@ -363,21 +362,22 @@ export async function updateBlogPost(postId: string, formData: FormData) {
     };
     
   } catch (error) {
-    console.error('Error in updateBlogPost:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred'
-    };
+    console.error('[blog-fixed] updateBlogPost failed:', error instanceof Error ? error.message : error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
 export async function deleteBlogPost(postId: string) {
   try {
-    // 验证管理员权限
     await requireAdmin();
-    
+
+    if (!isValidPostId(postId)) {
+      console.warn('[blog-fixed] deleteBlogPost: invalid postId format');
+      return { success: false, error: 'Invalid post' };
+    }
+
     const supabase = await getSupabase();
-    
+
     // 删除数据库记录
     const { error } = await supabase
       .from('blog_posts')
@@ -385,14 +385,9 @@ export async function deleteBlogPost(postId: string) {
       .eq('id', postId);
     
     if (error) {
-      console.error('Error deleting blog post:', error);
-      return {
-        success: false,
-        error: `Database error: ${error.message}`
-      };
+      console.error('[blog-fixed] deleteBlogPost Supabase error:', error.message);
+      return { success: false, error: 'Failed to delete post' };
     }
-    
-    console.log('Blog post deleted successfully:', postId);
     
     // 重新验证博客页面
     revalidatePath('/blog');
@@ -404,11 +399,8 @@ export async function deleteBlogPost(postId: string) {
     };
     
   } catch (error) {
-    console.error('Error in deleteBlogPost:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred'
-    };
+    console.error('[blog-fixed] deleteBlogPost failed:', error instanceof Error ? error.message : error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
@@ -432,4 +424,40 @@ function generateSlug(title: string): string {
   }
   
   return slug.slice(0, 100);
+}
+
+const MAX_SLUG_UNIQUE_ITERATIONS = 1000;
+
+// 辅助函数：确保 slug 唯一
+async function ensureUniqueSlug(supabase: any, baseSlug: string, excludeId?: string): Promise<string> {
+  let slug = baseSlug;
+  let counter = 1;
+
+  while (counter <= MAX_SLUG_UNIQUE_ITERATIONS) {
+    let query = supabase
+      .from('blog_posts')
+      .select('id')
+      .eq('slug', slug);
+
+    if (excludeId) {
+      query = query.neq('id', excludeId);
+    }
+
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error('[blog-fixed] ensureUniqueSlug query error:', error.message);
+      return slug;
+    }
+
+    if (!data) {
+      return slug;
+    }
+
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+
+  console.error('[blog-fixed] ensureUniqueSlug exceeded max iterations', { baseSlug, max: MAX_SLUG_UNIQUE_ITERATIONS });
+  return `${baseSlug}-${Date.now()}`;
 }
